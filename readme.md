@@ -16,7 +16,7 @@ For ethical concerns, we don't provide code to discover RVPs, which requires sen
 
 You can implement a stateless scanner like many well-known tools (e.g., [ZMap](https://github.com/zmap/zmap)) to discover RVPs. 
 
-`targetgen.c` may be a reference for you to generate your scanning targets to discover RVPs. 
+`targetgen` may be a reference for you to generate your scanning targets to discover RVPs. 
 You can read our paper for more details.
 
 Organize your scanning result in the following format (`data/RVPs.txt` for reference):
@@ -53,7 +53,7 @@ Edit `config.ini`:
 
 
 ## Note
-The program requires *sending packets with spoofed source addresses*, **make sure that you are aware of potential ethical issues and also make sure that your ISP will not filter them**.
+The program requires *sending packets with spoofed source addresses* (you can check with `spooftest`), **make sure that you are aware of potential ethical issues and also make sure that your ISP will not filter them**.
 
 
 

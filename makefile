@@ -1,4 +1,4 @@
-all : isav rvping targetgen
+all : isav rvping targetgen spooftest
 .PHONY : clean
 
 targetgen: targetgen.o src/common.o
@@ -19,6 +19,12 @@ isav: isav.o src/common.o src/probe.o src/sniffer.o
 isav.o: isav.c 
 	clang -c isav.c -o isav.o 
 
+spooftest: spooftest.o src/common.o src/probe.o src/sniffer.o
+	clang -o spooftest spooftest.o src/common.o src/probe.o src/sniffer.o  -lpcap -pthread -g
+
+spooftest.o: spooftest.c 
+	clang -c spooftest.c -o spooftest.o 
+
 src/probe.o: src/probe.c src/probe.h src/common.h
 	clang -c src/probe.c -o src/probe.o
 
@@ -29,4 +35,4 @@ src/common.o: src/common.c src/common.h
 	clang -c src/common.c -o src/common.o
 
 clean:
-	rm -rf *.o src/*.o isav targetgen rvping
+	rm -rf *.o src/*.o isav targetgen rvping spooftest
