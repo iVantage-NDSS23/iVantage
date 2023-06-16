@@ -20,8 +20,9 @@ void setSnifferFilter(const char* my_filter) {
 }
 
 void processPacket(u_char* arg, const struct pcap_pkthdr* pkthdr, const u_char* packet) {
+    if (!arg) return;
     struct SniffLog* ptr   = (struct SniffLog*) arg;
-    ptr->tv[ptr->captured] = pkthdr->ts;
+    // ptr->tv[ptr->captured] = pkthdr->ts;
     (ptr->captured)++;
     return;
 }
@@ -32,6 +33,7 @@ void sigHandlerBreakLoop(int arg) {
 
 void* doSniff(void* ptr) {
     struct sigaction act;
+    sigemptyset(&act.sa_mask);
     sigaddset(&act.sa_mask, SIGUSR1);
     act.sa_handler = sigHandlerBreakLoop;
     act.sa_flags   = 0;

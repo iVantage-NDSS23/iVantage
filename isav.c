@@ -18,8 +18,9 @@ void* sendPackets(void* arg_ptr) {
     return (void*) (NULL);
 }
 
-int measureRcv(struct Probe* probe, struct Probe* noiseMaker, int packets, int noisePackets,
-               int wait_sec, const char* src, const char* dst, const char* fake_src) {
+int measureRcv(struct Probe* probe, struct Probe* noiseMaker, int packets,
+               int noisePackets, int wait_sec, const char* src, const char* dst,
+               const char* fake_src) {
     struct SniffLog log;
 
     struct Arg arg1;
@@ -33,7 +34,8 @@ int measureRcv(struct Probe* probe, struct Probe* noiseMaker, int packets, int n
     log.captured = 0;
 
     prepareEchoRequest(probe, src, dst, 0, 0, 64);
-    if (fake_src != NULL) prepareEchoRequest(noiseMaker, fake_src, dst, 0, 0, 64);
+    if (fake_src != NULL)
+        prepareEchoRequest(noiseMaker, fake_src, dst, 0, 0, 64);
     setSnifferFilter("icmp6 and (ip6[40] == 1 or ip6[40] == 3)");
     startSniff(&log);
 
@@ -54,7 +56,7 @@ int measureRcv(struct Probe* probe, struct Probe* noiseMaker, int packets, int n
 void showTime() {
     long t        = time(NULL);
     struct tm* tm = localtime(&t);
-    printf("Current Time: %02d/%02d/%02d %02d:%02d:%02d\n", tm->tm_year + 1900,
+    printf("Current Time: %02d/%02d/%02d %02d:%02d:%02d", tm->tm_year + 1900,
            tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
@@ -92,7 +94,7 @@ int main() {
 
     setSniffer(CFG.interface);
 
-    struct Probe* probe    = (struct Probe*) malloc(sizeof(struct Probe));
+    struct Probe* probe      = (struct Probe*) malloc(sizeof(struct Probe));
     struct Probe* noiseMaker = (struct Probe*) malloc(sizeof(struct Probe));
 
     initProbe(probe, CFG.interface, (u8*) CFG.gateway_mac);
@@ -101,6 +103,9 @@ int main() {
     int wait_sec             = 5;
     int max_tries_per_prefix = 5;  // max tries in one prefix when encounting very strict
                                    // or very loose rate limiting
+    int max_rounds = 5;            // how many times each rcv will be measured
+    unsigned int interval_days =
+        14;  // interval days after all rcv's are measured max_rounds times
 
     char file_buf[FILE_BUFSIZE];
 
@@ -116,21 +121,23 @@ int main() {
     if (fp == NULL) {
         perror("Error: Cannot Open RVP File");
     }
-    int i_prefix = -1;  // indicies of prefixes
 
-    int tries_count = 0;
+    printf("# ");
     showTime();
-    int type = 1;
+
+    int type        = 1;
+    int i_prefix    = -1;  // indicies of prefixes
+    int tries_count = 0;
+
     while (fgets(file_buf, FILE_BUFSIZE, fp) != NULL) {
         if (file_buf[0] == '#') {  // Find the line with prefix information
             i_prefix++;
             if (strcmp(tmp_dst, "Empty") != 0) {
                 strcpy(targets[i_prefix - 1], tmp_dst);
                 int rcv = tmp_rcv;
-                printf("[#%d, Type %d] Prefix: %s, AS Number: %s, "
-                       "Target: %s. ",
-                       i_prefix - 1 + 1, type, prefix, as_number, dst);
-                printf("Rcv1: %d/%d.", rcv, CFG.iSAV_n);
+                printf("\n%d %d %s %s %s %s %ld ", i_prefix - 1 + 1, type, prefix,
+                       as_number, CFG.src_ipv6_addr, dst, time(NULL));
+                printf("%d %d", rcv, CFG.iSAV_n);
             } else if (i_prefix > 0 && (strcmp(targets[i_prefix - 1], "Empty") == 0 ||
                                         strcmp(targets[i_prefix - 1], "Invalid") == 0)) {
                 --i_prefix;
@@ -170,26 +177,24 @@ int main() {
                             strcpy(targets[i_prefix], "Invalid");
                         }
                     }
-                    if (!flag) continue;
+                    if (!flag)
+                        continue;
                 }
 
                 strcpy(targets[i_prefix], dst);
                 strcpy(tmp_dst, "Empty");
-                printf("\n[#%d, Type %d] Prefix: %s, AS Number: %s, "
-                       "Target: %s. ",
-                       i_prefix + 1, type, prefix, as_number, dst);
-                printf("Rcv1: %d/%d.", rcv, CFG.iSAV_n);
+                printf("\n%d %d %s %s %s %s %ld ", i_prefix + 1, type, prefix, as_number,
+                       CFG.src_ipv6_addr, dst, time(NULL));
+                printf("%d %d", rcv, CFG.iSAV_n);
             }
         }
     }
-
     if (strcmp(tmp_dst, "Empty") != 0) {
         strcpy(targets[i_prefix], tmp_dst);
         int rcv = 1;
-        printf("\n[#%d, Type %d] Prefix: %s, AS Number: %s, "
-               "Target: %s. ",
-               i_prefix + 1, type, prefix, as_number, dst);
-        printf("Rcv1: %d/%d.", rcv, CFG.iSAV_n);
+        printf("\n%d %d %s %s %s %s %ld ", i_prefix + 1, type, prefix, as_number,
+               CFG.src_ipv6_addr, dst, time(NULL));
+        printf("%d %d", rcv, CFG.iSAV_n);
     } else if (strcmp(targets[i_prefix], "Empty") == 0 ||
                strcmp(targets[i_prefix], "Invalid") ==
                    0) {  // Remove the last invalid item.
@@ -197,37 +202,60 @@ int main() {
     }
 
     int n_prefixes = i_prefix + 1;  // total number of prefixes
-    printf("\nMeasuring %d Prefix(es).\n", n_prefixes);
+    printf("\n# Measuring %d Prefix(es).", n_prefixes);
+    int round = 0;
+
     while (1) {
         type++;
         if (type == 4) {
+            printf("\n# Round %d Ends. ", round);
+            showTime();
+
+            round++;
+            if (round >= max_rounds) {
+                printf("\n# Finished. Waiting...");
+                sleep(interval_days * 24 * 3600);
+                round = 0;
+                type  = 3;
+                continue;
+            }
             type = 1;
         }
-        printf("\n");
-        showTime();
-        printf("\n");
+
         for (int i = 0; i < n_prefixes; i++) {
-            printf("\n[#%d, Type %d] Prefix: %s, AS Number: %s, Target: %s. ", i + 1,
-                   type, prefixes[i], as_numbers[i], targets[i]);
-            strcpy(dst, targets[i]);
             setFakeSrc(targets[i], fake_src_there);  // Set according to the IPv6 address
                                                      // of the measurement target.
+            if (type == 1) {
+                printf("\n%d %d %s %s %s %s %ld ", i + 1, type, prefixes[i],
+                       as_numbers[i], CFG.src_ipv6_addr, targets[i], time(NULL));
+            } else if (type == 2) {
+                printf("\n%d %d %s %s %s %s %ld %s ", i + 1, type, prefixes[i],
+                       as_numbers[i], CFG.src_ipv6_addr, targets[i], time(NULL),
+                       fake_src_here);
+            } else {
+                printf("\n%d %d %s %s %s %s %ld %s ", i + 1, type, prefixes[i],
+                       as_numbers[i], CFG.src_ipv6_addr, targets[i], time(NULL),
+                       fake_src_there);
+            }
+
+            strcpy(dst, targets[i]);
+
             int rcv;
             switch (type) {
                 case 1:
                     rcv = measureRcv(probe, noiseMaker, CFG.iSAV_n, CFG.iSAV_m, wait_sec,
                                      CFG.src_ipv6_addr, dst, NULL);
-                    printf("Rcv1: %d/%d.", rcv, CFG.iSAV_n);
+                    printf("%d %d", rcv, CFG.iSAV_n);
                     break;
                 case 2:
                     rcv = measureRcv(probe, noiseMaker, CFG.iSAV_n, CFG.iSAV_m, wait_sec,
                                      CFG.src_ipv6_addr, dst, fake_src_here);
-                    printf("Rcv2: %d/%d.", rcv, CFG.iSAV_n);
+                    printf("%d %d", rcv, CFG.iSAV_n);
                     break;
                 case 3:
                     rcv = measureRcv(probe, noiseMaker, CFG.iSAV_n, CFG.iSAV_m, wait_sec,
                                      CFG.src_ipv6_addr, dst, fake_src_there);
-                    printf("Rcv3: %d/%d.", rcv, CFG.iSAV_n);
+                    printf("%d %d", rcv, CFG.iSAV_n);
                     break;
             }
         }

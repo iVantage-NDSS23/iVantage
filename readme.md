@@ -4,7 +4,7 @@ This project provides source code of the NDSS'23 paper: [Your Router is My Probe
 
 This project mainly consists of two tools:
 
-* `iSAV`. A tool for Internet-scale active measurement of deploymenet of IPv6 inbound source address validation. To put it simply, it detects whether an IPv6 network has deployed filtering policy of incoming spoofed-source packets.
+* `iSAV`. A tool for Internet-scale active measurement of deployment of IPv6 inbound source address validation. To put it simply, it detects whether an IPv6 network has deployed filtering policy of incoming spoofed-source packets.
 
 * `RVPing`. A tool to measure the reachability between two IPv6 nodes without directing controlling any of them.
 
@@ -60,7 +60,7 @@ The program requires *sending packets with spoofed source addresses*, **make sur
 # iSAV
 The provided program is used for an Internet-scale ISAV (inbound source address validation) measurements.
 
-Put the RVPs you've discovered in `data/RVPs.txt`, then run `./isav`. The program will consistently measures the `rcv1`, `rcv2` and `rcv3` of each prefix, as we introduced in our paper.
+Put the RVPs you've discovered in `data/RVPs.txt`, then run `./isav`. The program consistently measures the `rcv1`, `rcv2` and `rcv3` of each prefix, as we introduced in our paper.
 
 We recommend redirecting the `stdout` of the program to a file, and then write scripts to analyze your measurement results.
 
@@ -83,10 +83,30 @@ rvping -a <RVP> -b <target (A or B)> -x <RVP target> [-r<specified RTT>] [-t<thr
 * `RVP`: IPv6 address of the (proxy) RVP (remote ''vantage point'').
 * `target`: The reachability between the `target` and (proxy) RVP is what you want to measure.
 * `RVP target`: By sending packets to `RVP target`, you can receive ICMP error messages (mainly ICMP Destinaion Unreachable) from RVP. This is actually the way we discover RVPs.
-* `specified RTT`: The measurement requires estimation of the RTT between the targets. Since the estimation can be difficult and our algorithm remains not so robust, we recommend you manully specify a estimated value of the RTT.
-* `threshold`: The threshold to determine the reachability (unreachability). See paper for more details. (default: 0.6)
+* `specified RTT`: The measurement requires estimation of the RTT between the targets. Since the estimation can be difficult and our algorithm remains not so robust, we recommend you manually specify a estimated value of the RTT.
+* `threshold`: The threshold to determine the (un)reachability. See paper for more details. (default: 0.6)
 * `measurement times`: How many times the reachability measurements will be performed. (default: 3)
 
+
+# Citing this Paper
+```
+@inproceedings{ivantage,
+  author       = {Long Pan and
+                  Jiahai Yang and
+                  Lin He and
+                  Zhiliang Wang and
+                  Leyao Nie and
+                  Guanglei Song and
+                  Yaozhong Liu},
+  title        = {Your Router is My Prober: Measuring IPv6 Networks via {ICMP} Rate
+                  Limiting Side Channels},
+  booktitle    = {30th Annual Network and Distributed System Security Symposium, {NDSS}
+                  2023, San Diego, California, USA, February 27 - March 3, 2023},
+  publisher    = {The Internet Society},
+  year         = {2023},
+  url          = {https://www.ndss-symposium.org/ndss-paper/your-router-is-my-prober-measuring-ipv6-networks-via-icmp-rate-limiting-side-channels/},
+}
+```
 
 
 # Contact
