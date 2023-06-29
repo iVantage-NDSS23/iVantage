@@ -5,6 +5,8 @@
 #include <pcap.h>
 
 #define SNIFFER_BUFSIZE 1000
+#define SNIFFER_SNAP_LEN 1514
+#define SNIFFER_TIMEOUT 1
 
 extern char errBuf[PCAP_ERRBUF_SIZE];
 
@@ -12,6 +14,9 @@ extern pcap_t* sniffer;
 extern struct bpf_program filter;
 
 extern pthread_t sniff_thread;
+
+extern bpf_u_int32 net;
+extern bpf_u_int32 mask;
 
 struct SniffLog {
     int captured;

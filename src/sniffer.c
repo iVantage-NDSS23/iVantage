@@ -5,18 +5,32 @@ pcap_t* sniffer;
 struct bpf_program filter;
 pthread_t sniff_thread;
 
+bpf_u_int32 net;
+bpf_u_int32 mask;
+
 void setSniffer(const char* interface) {
-    sniffer = pcap_open_live(interface, 1514, 1, 0, errBuf);
+    if (pcap_lookupnet(interface, &net, &mask, errBuf) < 0) {
+        perror("error: pcap_lookupnet()");
+        net = 0;
+        mask = 0;
+    }
+
+    sniffer = pcap_open_live(interface, SNIFFER_SNAP_LEN, 1, SNIFFER_TIMEOUT * KILO, errBuf);
     if (!sniffer) {
         perror("error: pcap_open_live()");
         exit(1);
     }
-    pcap_set_buffer_size(sniffer, 1024 * KILO);
+    // pcap_set_buffer_size(sniffer, 1024 * KILO);
+    // pcap_set_timeout(sniffer, 100);
 }
 
 void setSnifferFilter(const char* my_filter) {
-    pcap_compile(sniffer, &filter, my_filter, 1, 0);
-    pcap_setfilter(sniffer, &filter);
+    if (pcap_compile(sniffer, &filter, my_filter, 0, net) < 0) {
+        perror("error: pcap_compile()");
+    }
+    if (pcap_setfilter(sniffer, &filter) < 0) {
+        perror("error: pcap_pcap_setfilter()");
+    }
 }
 
 void processPacket(u_char* arg, const struct pcap_pkthdr* pkthdr, const u_char* packet) {
